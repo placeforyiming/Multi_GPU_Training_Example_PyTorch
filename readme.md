@@ -1,10 +1,15 @@
-This is a simple example of pytorch DDP multi-gpu training on one machine.
+# How to Use PyTorch DDP for Multi-gpus on a Single Machine
 
-Pull the docekr image : docker pull pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
+Here we provide a simple example with minimum change of code.
 
-docker run -it --name yiming_1 --gpus=all --shm-size=20G --mount type=bind,source=/mnt/VOL3/yiming,target=/workspace pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
+In the script ***train.py***, we put a demo code to train a LeNet with batchnorm on MNIST classification task.
 
-The train.py is the training script of a single gpu, and the train_multi.py is the multi-gpu counterpart. All extra code has been commented with ##### multi_gpu need:.
+In the script ***train_multi.py***, we transfer the training on mult-gpus. The major part of the code keeps the same as ***train.py***, we add extra code with the comment ***##### multi_gpu need:*** , including argparse for local_rank, initialization, data sampler, syncBN and save the checkpoint.
+
+We test both two scrips under a docker container below:
+
+***Pull the docekr image : docker pull pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime***
+
 
 
 
