@@ -15,7 +15,9 @@ if not os.path.exists(root):
     
 trans = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
 # if not exist, download mnist dataset
+
 train_set = dset.MNIST(root=root, train=True, transform=trans, download=True)
+
 test_set = dset.MNIST(root=root, train=False, transform=trans, download=True)
 
 batch_size = 100
@@ -73,6 +75,10 @@ class LeNet(nn.Module):
 ## training
 model = LeNet()
 
+epoch=3
+
+model.load_state_dict(torch.load("./"+str(model.name())))
+
 if use_cuda:
     model = model.cuda()
 
@@ -80,7 +86,10 @@ optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
 criterion = nn.CrossEntropyLoss()
 
+
+'''
 for epoch in range(3):
+   
     # trainning
     ave_loss = 0
     for batch_idx, (x, target) in enumerate(train_loader):
@@ -96,6 +105,8 @@ for epoch in range(3):
         if (batch_idx+1) % 100 == 0 or (batch_idx+1) == len(train_loader):
             print ('==>>> epoch: {}, batch index: {}, train loss: {:.6f}'.format(
                 epoch, batch_idx+1, ave_loss))
+'''
+if True:
     # testing
     correct_cnt, ave_loss = 0, 0
     total_cnt = 0

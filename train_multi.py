@@ -6,8 +6,29 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 import torch.optim as optim
-## load mnist dataset
+
+
 use_cuda = torch.cuda.is_available()
+## load mnist dataset
+
+
+
+###### multi_gpu need: argparse to import extra parameter
+import torch.distributed as dist
+import argparse
+from torch.nn.parallel import DistributedDataParallel as DDP
+parser=argparse.ArgumentParser()
+parser.add_argument("--local_rank", default=-1,type=int)
+arg_param=parser.parse_args()
+
+##### multi_gpu_need:  initialization
+torch.cuda.set_device(arg_param.local_rank)
+dist.init_process_group(backend='nccl')
+
+
+
+
+
 
 root = './data'
 if not os.path.exists(root):
@@ -20,10 +41,28 @@ test_set = dset.MNIST(root=root, train=False, transform=trans, download=True)
 
 batch_size = 100
 
+
+#####    multi_gpu_need:  add distributed sampler
+'''
 train_loader = torch.utils.data.DataLoader(
                  dataset=train_set,
                  batch_size=batch_size,
                  shuffle=True)
+
+'''
+train_sampler=torch.utils.data.distributed.DistributedSampler(train_set)
+
+train_loader = torch.utils.data.DataLoader(
+                 dataset=train_set,
+                 batch_size=batch_size,
+                 sampler=train_sampler)
+
+
+
+
+
+
+
 test_loader = torch.utils.data.DataLoader(
                 dataset=test_set,
                 batch_size=batch_size,
@@ -72,15 +111,26 @@ class LeNet(nn.Module):
 
 ## training
 model = LeNet()
-
 if use_cuda:
     model = model.cuda()
+
+
+
+##### multi_gpu_need:   add model with DDP
+device=torch.device("cuda",arg_param.local_rank)
+model=DDP(model.to(device),device_ids=[arg_param.local_rank],output_device=arg_param.local_rank)
+
+
+
 
 optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
 criterion = nn.CrossEntropyLoss()
 
 for epoch in range(3):
+    ##### multi_gpu_need: set epoch number
+    train_loader.sampler.set_epoch(epoch)
+    
     # trainning
     ave_loss = 0
     for batch_idx, (x, target) in enumerate(train_loader):
@@ -102,7 +152,7 @@ for epoch in range(3):
     for batch_idx, (x, target) in enumerate(test_loader):
         if use_cuda:
             x, target = x.cuda(), target.cuda()
-       #x, target = Variable(x, volatile=True), Variable(target, volatile=True)
+        #x, target = Variable(x, volatile=True), Variable(target, volatile=True)
         out = model(x)
         loss = criterion(out, target)
         _, pred_label = torch.max(out.data, 1)
@@ -114,5 +164,7 @@ for epoch in range(3):
         if(batch_idx+1) % 100 == 0 or (batch_idx+1) == len(test_loader):
             print ('==>>> epoch: {}, batch index: {}, test loss: {:.6f}, acc: {:.3f}'.format(
                 epoch, batch_idx+1, ave_loss, correct_cnt * 1.0 / total_cnt))
-
-torch.save(model.state_dict(), model.name())
+            print (arg_param.local_rank)
+            print (total_cnt)
+if dist.get_rank()==0:
+    torch.save(model.module.state_dict(), model.module.name())
