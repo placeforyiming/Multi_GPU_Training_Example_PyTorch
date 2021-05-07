@@ -7,6 +7,7 @@ In the script ***train.py***, we put a demo code to train a LeNet with batchnorm
 In the script ***train_multi.py***, we transfer the training on mult-gpus. The major part of the code keeps the same as ***train.py***, we add extra code with the comment ***##### multi_gpu need:*** , including argparse for local_rank, initialization, data sampler, syncBN and save the checkpoint.
 
 TO run the training with multi-gpus, please run the bash file as :
+
 ***bash train_multi.sh***
 
 We test both two scrips under a docker container below:
