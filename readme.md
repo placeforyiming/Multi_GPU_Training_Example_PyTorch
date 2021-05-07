@@ -12,7 +12,7 @@ TO run the training with multi-gpus, please run the bash file as :
 
 We test both two scrips under a docker container below:
 
-***Pull the docekr image : docker pull pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime***
+***pull the docekr image : docker pull pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime***
 
 
 
