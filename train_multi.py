@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -42,20 +43,20 @@ test_set = dset.MNIST(root=root, train=False, transform=trans, download=True)
 batch_size = 100
 
 
-#####    multi_gpu_need:  add distributed sampler
+#####	 multi_gpu_need:  add distributed sampler
 '''
 train_loader = torch.utils.data.DataLoader(
-                 dataset=train_set,
-                 batch_size=batch_size,
-                 shuffle=True)
+		 dataset=train_set,
+		 batch_size=batch_size,
+		 shuffle=True)
 
 '''
 train_sampler=torch.utils.data.distributed.DistributedSampler(train_set)
 
 train_loader = torch.utils.data.DataLoader(
-                 dataset=train_set,
-                 batch_size=batch_size,
-                 sampler=train_sampler)
+		 dataset=train_set,
+		 batch_size=batch_size,
+		 sampler=train_sampler)
 
 
 
@@ -64,9 +65,9 @@ train_loader = torch.utils.data.DataLoader(
 
 
 test_loader = torch.utils.data.DataLoader(
-                dataset=test_set,
-                batch_size=batch_size,
-                shuffle=False)
+		dataset=test_set,
+		batch_size=batch_size,
+		shuffle=False)
 
 print ('==>>> total trainning batch number: {}'.format(len(train_loader)))
 print ('==>>> total testing batch number: {}'.format(len(test_loader)))
@@ -79,7 +80,7 @@ if use_cuda:
 
 
 
-##### multi_gpu_need:   add model with DDP
+##### multi_gpu_need:	add model with DDP
 device=torch.device("cuda",arg_param.local_rank)
 model=torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 model=DDP(model.to(device),device_ids=[arg_param.local_rank],output_device=arg_param.local_rank)
@@ -92,43 +93,43 @@ optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 criterion = nn.CrossEntropyLoss()
 
 for epoch in range(3):
-    ##### multi_gpu_need: set epoch number
-    train_loader.sampler.set_epoch(epoch)
-    
-    # trainning
-    ave_loss = 0
-    for batch_idx, (x, target) in enumerate(train_loader):
-        optimizer.zero_grad()
-        if use_cuda:
-            x, target = x.cuda(), target.cuda()
-        x, target = Variable(x), Variable(target)
-        out = model(x)
-        loss = criterion(out, target)
-        ave_loss = ave_loss * 0.9 + loss.data * 0.1
-        loss.backward()
-        optimizer.step()
-        if (batch_idx+1) % 100 == 0 or (batch_idx+1) == len(train_loader):
-            print ('==>>> epoch: {}, batch index: {}, train loss: {:.6f}'.format(
-                epoch, batch_idx+1, ave_loss))
-    # testing
-    correct_cnt, ave_loss = 0, 0
-    total_cnt = 0
-    for batch_idx, (x, target) in enumerate(test_loader):
-        if use_cuda:
-            x, target = x.cuda(), target.cuda()
-        #x, target = Variable(x, volatile=True), Variable(target, volatile=True)
-        out = model(x)
-        loss = criterion(out, target)
-        _, pred_label = torch.max(out.data, 1)
-        total_cnt += x.data.size()[0]
-        correct_cnt += (pred_label == target.data).sum()
-        # smooth average
-        ave_loss = ave_loss * 0.9 + loss.data * 0.1
-        
-        if(batch_idx+1) % 100 == 0 or (batch_idx+1) == len(test_loader):
-            print ('==>>> epoch: {}, batch index: {}, test loss: {:.6f}, acc: {:.3f}'.format(
-                epoch, batch_idx+1, ave_loss, correct_cnt * 1.0 / total_cnt))
-            print (arg_param.local_rank)
-            print (total_cnt)
+	##### multi_gpu_need: set epoch number
+	train_loader.sampler.set_epoch(epoch)
+	# trainning
+	ave_loss = 0
+	for batch_idx, (x, target) in enumerate(train_loader):
+		optimizer.zero_grad()
+		if use_cuda:
+			x, target = x.cuda(), target.cuda()
+		x, target = Variable(x), Variable(target)
+		print (np.shape(x))
+		out = model(x)
+		loss = criterion(out, target)
+		ave_loss = ave_loss * 0.9 + loss.data * 0.1
+		loss.backward()
+		optimizer.step()
+		if (batch_idx+1) % 100 == 0 or (batch_idx+1) == len(train_loader):
+			print ('==>>> epoch: {}, batch index: {}, train loss: {:.6f}'.format(
+			epoch, batch_idx+1, ave_loss))
+	# testing
+	correct_cnt, ave_loss = 0, 0
+	total_cnt = 0
+	for batch_idx, (x, target) in enumerate(test_loader):
+		if use_cuda:
+			x, target = x.cuda(), target.cuda()
+		#x, target = Variable(x, volatile=True), Variable(target, volatile=True)
+		out = model(x)
+		loss = criterion(out, target)
+		_, pred_label = torch.max(out.data, 1)
+		total_cnt += x.data.size()[0]
+		correct_cnt += (pred_label == target.data).sum()
+		# smooth average
+		ave_loss = ave_loss * 0.9 + loss.data * 0.1
+	
+		if(batch_idx+1) % 100 == 0 or (batch_idx+1) == len(test_loader):
+			print ('==>>> epoch: {}, batch index: {}, test loss: {:.6f}, acc: {:.3f}'.format(
+			epoch, batch_idx+1, ave_loss, correct_cnt * 1.0 / total_cnt))
+			print (arg_param.local_rank)
+			print (total_cnt)
 if dist.get_rank()==0:
-    torch.save(model.module.state_dict(), model.module.name())
+	torch.save(model.module.state_dict(), model.module.name())
